@@ -7,31 +7,34 @@ const axios = require('axios');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Read Slack Bot Token from environment
+// Your bot token from environment
 const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN;
 
-// Parse JSON bodies
 app.use(bodyParser.json());
 
-// Slack Events endpoint
+// Endpoint Slack will post to
 app.post('/slack/events', async (req, res) => {
+  console.log('Slack event received:', req.body); // ✅ Debug log
+
   const { type, challenge, event } = req.body;
 
-  // Respond to Slack URL verification
+  // Handle Slack verification challenge
   if (type === 'url_verification') {
     return res.status(200).send(challenge);
   }
 
-  // Respond when bot is mentioned
+  // When bot is mentioned
   if (type === 'event_callback' && event.type === 'app_mention') {
-    const replyText = `👋 Hello <@${event.user}>! I saw your mention.`;
+    console.log('Bot was mentioned!'); // ✅ Debug log
+
+    const message = `👋 Hello <@${event.user}>! I saw your mention.`;
 
     try {
       await axios.post(
         'https://slack.com/api/chat.postMessage',
         {
           channel: event.channel,
-          text: replyText
+          text: message
         },
         {
           headers: {
@@ -40,18 +43,19 @@ app.post('/slack/events', async (req, res) => {
           }
         }
       );
+      console.log('✅ Reply sent to Slack!');
     } catch (error) {
-      console.error('Error posting message to Slack:', error.response?.data || error.message);
+      console.error('❌ Error sending message to Slack:', error.response?.data || error.message);
     }
   }
 
+  // Respond to Slack immediately
   res.status(200).send('OK');
 });
 
-// Optional: serve static HTML from /public
+// Serve static frontend if needed
 app.use(express.static('public'));
 
-// Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server is running on port ${PORT}`);
 });
