@@ -2,17 +2,40 @@ const express = require('express');
 const axios = require('axios');
 const { getModalDefinition } = require('../utils/modal');
 const { getUserEmail } = require('../utils/slack');
-const { fetchDepartments } = require('../utils/freshservice');
 
 const router = express.Router();
+
 const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN;
 const FRESHSERVICE_DOMAIN = process.env.FRESHSERVICE_DOMAIN;
 const FRESHSERVICE_API_KEY = process.env.FRESHSERVICE_API_KEY;
 
+// Fetch departments for dropdown
+async function fetchDepartments() {
+  const authHeader = {
+    Authorization: 'Basic ' + Buffer.from(`${FRESHSERVICE_API_KEY}:X`).toString('base64'),
+    'Content-Type': 'application/json'
+  };
+
+  try {
+    const response = await axios.get(
+      `https://${FRESHSERVICE_DOMAIN}/api/v2/departments`,
+      { headers: authHeader }
+    );
+
+    return response.data.departments.map(dept => ({
+      text: { type: 'plain_text', text: dept.name, emoji: true },
+      value: String(dept.id)
+    }));
+  } catch (err) {
+    console.error('❌ Failed to fetch Freshservice departments:', err.message);
+    return [];
+  }
+}
+
 router.post('/', express.urlencoded({ extended: true }), async (req, res) => {
   const payload = JSON.parse(req.body.payload);
 
-  // Handle Slack message shortcut to open modal
+  // 📥 Open modal from shortcut
   if (payload.type === 'message_action' && payload.callback_id === 'create_ticket') {
     const trigger_id = payload.trigger_id;
     const messageText = payload.message.text;
@@ -44,7 +67,7 @@ router.post('/', express.urlencoded({ extended: true }), async (req, res) => {
     return res.status(200).send();
   }
 
-  // Handle Slack modal submission
+  // 📦 Handle modal submission
   if (payload.type === 'view_submission') {
     console.log('\n📥 Modal submission triggered');
 
@@ -54,14 +77,12 @@ router.post('/', express.urlencoded({ extended: true }), async (req, res) => {
     const description = values.descarea?.['plain_text_input-action']?.value;
     const groupId = values.grouparea?.['static_select-action']?.selected_option?.value;
 
-    // Log the extracted values
     console.log('Email:', email);
     console.log('Description:', description);
     console.log('Group ID:', groupId);
 
-    // Validate inputs
     if (!email || !description || !groupId) {
-      console.warn('❌ Missing one or more required fields in modal submission.');
+      console.warn('❌ Missing required fields');
       return res.status(200).json({ response_action: 'errors', errors: {
         emailarea: 'Missing email',
         descarea: 'Missing description',
@@ -76,13 +97,13 @@ router.post('/', express.urlencoded({ extended: true }), async (req, res) => {
 
     try {
       const assetPayload = {
-        asset_type_id: 1234567890, // Replace with actual asset type ID from Freshservice
+        asset_type_id: 27000142300, // ✅ replace with real asset type from your system
         name: `Slack Request from ${email}`,
-        description,
+        description: description,
         department_id: groupId,
         custom_fields: {
-          email,
-          description
+          email: email,
+          description: description
         }
       };
 

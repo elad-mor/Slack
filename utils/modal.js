@@ -37,13 +37,13 @@ function getModalDefinition(email = '', originalText = '', departmentOptions = [
         block_id: "grouparea",
         element: {
           type: "static_select",
-          action_id: "static_select-action",
           placeholder: {
             type: "plain_text",
-            text: "Select a department",
+            text: "Select a group for the ticket",
             emoji: true
           },
-          options: departmentOptions
+          options: departmentOptions,
+          action_id: "static_select-action"
         },
         label: {
           type: "plain_text",
