@@ -1,7 +1,7 @@
 function getModalDefinition(email, originalText) {
   return {
     type: "modal",
-    title: { type: "plain_text", text: "Create Service Request", emoji: true },
+    title: { type: "plain_text", text: "Create A Ticket", emoji: true },
     submit: { type: "plain_text", text: "Send", emoji: true },
     close: { type: "plain_text", text: "Cancel", emoji: true },
     blocks: [
