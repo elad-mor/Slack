@@ -11,7 +11,7 @@ async function getUserEmail(userId) {
 
     return res.data.profile.email || '';
   } catch (err) {
-    console.error('❌ Failed to fetch user email:', err.message);
+    console.error('❌ Slack user email fetch error:', err.message);
     return '';
   }
 }

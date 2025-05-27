@@ -4,18 +4,15 @@ function getModalDefinition(email = '', originalText = '', departmentOptions = [
     callback_id: "create_ticket_modal",
     title: {
       type: "plain_text",
-      text: "Create Service Request",
-      emoji: true
+      text: "Create Service Request"
     },
     submit: {
       type: "plain_text",
-      text: "Send",
-      emoji: true
+      text: "Send"
     },
     close: {
       type: "plain_text",
-      text: "Cancel",
-      emoji: true
+      text: "Cancel"
     },
     blocks: [
       {
@@ -28,8 +25,7 @@ function getModalDefinition(email = '', originalText = '', departmentOptions = [
         },
         label: {
           type: "plain_text",
-          text: "Requester Email:",
-          emoji: true
+          text: "Requester Email:"
         }
       },
       {
@@ -39,16 +35,14 @@ function getModalDefinition(email = '', originalText = '', departmentOptions = [
           type: "static_select",
           placeholder: {
             type: "plain_text",
-            text: "Select a group for the ticket",
-            emoji: true
+            text: "Select a department"
           },
           options: departmentOptions,
           action_id: "static_select-action"
         },
         label: {
           type: "plain_text",
-          text: "Group:",
-          emoji: true
+          text: "Department"
         }
       },
       {
@@ -62,8 +56,7 @@ function getModalDefinition(email = '', originalText = '', departmentOptions = [
         },
         label: {
           type: "plain_text",
-          text: "Request Description:",
-          emoji: true
+          text: "Request Description:"
         }
       }
     ]
