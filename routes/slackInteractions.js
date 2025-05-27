@@ -5,12 +5,13 @@ const { getUserEmail } = require('../utils/slack');
 
 const router = express.Router();
 const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN;
+const FRESHSERVICE_DOMAIN = process.env.FRESHSERVICE_DOMAIN;
+const FRESHSERVICE_API_KEY = process.env.FRESHSERVICE_API_KEY;
 
-// Parse urlencoded Slack payload
 router.post('/', express.urlencoded({ extended: true }), async (req, res) => {
   const payload = JSON.parse(req.body.payload);
 
-  // 👇 Handle message shortcut
+  // Message shortcut: open modal
   if (payload.type === 'message_action' && payload.callback_id === 'create_ticket') {
     const trigger_id = payload.trigger_id;
     const messageText = payload.message.text;
@@ -33,48 +34,49 @@ router.post('/', express.urlencoded({ extended: true }), async (req, res) => {
         }
       );
     } catch (error) {
-      console.error('Modal open error:', error.response?.data || error.message);
+      console.error('❌ Error opening modal:', error.response?.data || error.message);
     }
 
-    return res.status(200).send(); // Always acknowledge
+    return res.status(200).send();
   }
 
-  // 👇 Handle modal submission
+  // Modal submission: extract + post to Freshservice
   if (payload.type === 'view_submission') {
     const values = payload.view.state.values;
 
     const email = values.emailarea['plain_text_input-action'].value;
     const description = values.descarea['plain_text_input-action'].value;
 
-    console.log('📥 Modal submission received:');
-    console.log('Email:', email);
-    console.log('Description:', description);
+    const authHeader = {
+      Authorization: 'Basic ' + Buffer.from(`${FRESHSERVICE_API_KEY}:X`).toString('base64'),
+      'Content-Type': 'application/json'
+    };
 
-    // TODO: Send to your system (Freshservice, Airtable, etc.)
-
-    // Optionally: send a message to user confirming receipt
     try {
-      await axios.post(
-        'https://slack.com/api/chat.postMessage',
-        {
-          channel: payload.user.id,
-          text: `✅ Ticket submitted!\n• *Email:* ${email}\n• *Description:* ${description}`
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${SLACK_BOT_TOKEN}`,
-            'Content-Type': 'application/json'
-          }
+      const assetPayload = {
+        asset_type_id: 1234567890, // TODO: replace with your actual asset type ID
+        name: `Slack Request from ${email}`,
+        description: description,
+        custom_fields: {
+          email: email,
+          description: description
         }
+      };
+
+      const result = await axios.post(
+        `https://${FRESHSERVICE_DOMAIN}/api/v2/assets`,
+        assetPayload,
+        { headers: authHeader }
       );
+
+      console.log('✅ Freshservice asset created:', result.data);
     } catch (error) {
-      console.error('Error sending confirmation:', error.response?.data || error.message);
+      console.error('❌ Failed to create Freshservice asset:', error.response?.data || error.message);
     }
 
-    return res.status(200).json({ response_action: "clear" });
+    return res.status(200).json({ response_action: 'clear' });
   }
 
-  // Default response
   res.status(200).send();
 });
 
