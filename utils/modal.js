@@ -1,4 +1,4 @@
-function getModalDefinition(email = '', originalText = '') {
+function getModalDefinition(email = '', originalText = '', departmentOptions = []) {
   return {
     type: "modal",
     callback_id: "create_ticket_modal",
@@ -19,9 +19,6 @@ function getModalDefinition(email = '', originalText = '') {
     },
     blocks: [
       {
-        type: "divider"
-      },
-      {
         type: "input",
         block_id: "emailarea",
         element: {
@@ -32,6 +29,25 @@ function getModalDefinition(email = '', originalText = '') {
         label: {
           type: "plain_text",
           text: "Requester Email:",
+          emoji: true
+        }
+      },
+      {
+        type: "input",
+        block_id: "grouparea",
+        element: {
+          type: "static_select",
+          action_id: "static_select-action",
+          placeholder: {
+            type: "plain_text",
+            text: "Select a department",
+            emoji: true
+          },
+          options: departmentOptions
+        },
+        label: {
+          type: "plain_text",
+          text: "Group:",
           emoji: true
         }
       },
