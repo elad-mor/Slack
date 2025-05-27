@@ -12,7 +12,7 @@ const FRESHSERVICE_API_KEY = process.env.FRESHSERVICE_API_KEY;
 router.post('/', express.urlencoded({ extended: true }), async (req, res) => {
   const payload = JSON.parse(req.body.payload);
 
-  // Handle Slack shortcut to open modal
+  // Handle Slack message shortcut to open modal
   if (payload.type === 'message_action' && payload.callback_id === 'create_ticket') {
     const trigger_id = payload.trigger_id;
     const messageText = payload.message.text;
@@ -46,11 +46,28 @@ router.post('/', express.urlencoded({ extended: true }), async (req, res) => {
 
   // Handle Slack modal submission
   if (payload.type === 'view_submission') {
+    console.log('\n📥 Modal submission triggered');
+
     const values = payload.view.state.values;
 
-    const email = values.emailarea['plain_text_input-action'].value;
-    const description = values.descarea['plain_text_input-action'].value;
-    const groupId = values.grouparea['static_select-action'].selected_option?.value;
+    const email = values.emailarea?.['plain_text_input-action']?.value;
+    const description = values.descarea?.['plain_text_input-action']?.value;
+    const groupId = values.grouparea?.['static_select-action']?.selected_option?.value;
+
+    // Log the extracted values
+    console.log('Email:', email);
+    console.log('Description:', description);
+    console.log('Group ID:', groupId);
+
+    // Validate inputs
+    if (!email || !description || !groupId) {
+      console.warn('❌ Missing one or more required fields in modal submission.');
+      return res.status(200).json({ response_action: 'errors', errors: {
+        emailarea: 'Missing email',
+        descarea: 'Missing description',
+        grouparea: 'Missing group'
+      }});
+    }
 
     const authHeader = {
       Authorization: 'Basic ' + Buffer.from(`${FRESHSERVICE_API_KEY}:X`).toString('base64'),
@@ -59,13 +76,13 @@ router.post('/', express.urlencoded({ extended: true }), async (req, res) => {
 
     try {
       const assetPayload = {
-        asset_type_id: 1234567890, // TODO: Replace with your Freshservice asset type ID
+        asset_type_id: 1234567890, // Replace with actual asset type ID from Freshservice
         name: `Slack Request from ${email}`,
-        description: description,
+        description,
         department_id: groupId,
         custom_fields: {
-          email: email,
-          description: description
+          email,
+          description
         }
       };
 
@@ -76,8 +93,22 @@ router.post('/', express.urlencoded({ extended: true }), async (req, res) => {
       );
 
       console.log('✅ Freshservice asset created:', result.data);
+
+      await axios.post(
+        'https://slack.com/api/chat.postMessage',
+        {
+          channel: payload.user.id,
+          text: `✅ Freshservice asset created!\n• *Email:* ${email}\n• *Group:* ${groupId}`
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${SLACK_BOT_TOKEN}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
     } catch (error) {
-      console.error('❌ Failed to create Freshservice asset:', error.response?.data || error.message);
+      console.error('❌ Freshservice API error:', error.response?.data || error.message);
     }
 
     return res.status(200).json({ response_action: 'clear' });
